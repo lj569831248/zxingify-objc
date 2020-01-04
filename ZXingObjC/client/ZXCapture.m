@@ -23,7 +23,7 @@
 #import "ZXHybridBinarizer.h"
 #import "ZXReader.h"
 #import "ZXResult.h"
-
+#import "ZXGenericMultipleBarcodeReader.h"
 @interface ZXCapture ()
 
 @property (nonatomic, strong) CALayer *binaryLayer;
@@ -391,12 +391,19 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
 
       if (self.delegate) {
         ZXBinaryBitmap *bitmap = [[ZXBinaryBitmap alloc] initWithBinarizer:binarizer];
-
+        
         NSError *error;
-        ZXResult *result = [self.reader decode:bitmap hints:self.hints error:&error];
-        if (result) {
+        ZXGenericMultipleBarcodeReader* multi = [[ZXGenericMultipleBarcodeReader alloc] initWithDelegate:self.reader];
+        NSArray *results = [multi decodeMultiple:bitmap hints:self.hints error:&error];
+        NSLog(@"%@",results);
+        if (results && results.count > 0) {
           dispatch_async(dispatch_get_main_queue(), ^{
-            [self.delegate captureResult:self result:result];
+              if ([self.delegate respondsToSelector:@selector(captureResult:result:)]) {
+                  [self.delegate captureResult:self result:results.firstObject];
+              }
+              if ([self.delegate respondsToSelector:@selector(captureResult:results:)]) {
+                  [self.delegate captureResult:self results:results];
+              }
           });
         }
       }
